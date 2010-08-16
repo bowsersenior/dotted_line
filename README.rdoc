@@ -1,0 +1,62 @@
+== DottedLine
+
+A plugin for ActiveRecord that tracks who is responsible for a change, and what they changed. Similar to other versioning or audit trail libraries like link:http://github.com/airblade/paper_trail and link:http://github.com/technoweenie/acts_as_versioned . DottedLine's focus is on keeping thorough, redundant signatures for changes that are independent of database id columns. DottedLine only *records* changes, it doesn't allow changes to be restored.
+
+
+== How do I start signing on the dotted line?
+
+In your model, just use `signs_on_the_dotted_line` like so:
+  class Message < ActiveRecord::Base
+    signs_on_the_dotted_line
+    ...
+
+You can also specify which associations to track, using the :for option, and specify one or more actions that require an explanation:
+  class Exam < ActiveRecord::Base
+    signs_on_the_dotted_line  :for => :grade,                   # one or more association names
+                              :require_explanation_for => :all  # :all, :none, or one or more action names (can be any string or symbol)
+    ...
+
+Here's one more example
+  class VeryBindingLegalAgreement < ActiveRecord::Base
+    signs_on_the_dotted_line :for => :agreed_terms, :require_explanation_for => ['deny', 'modify'], :default_action => 'submit'
+    ...
+
+All the work above will get you...
+...ABSOLUTELY NOTHING!
+
+DottedLine doesn't do anything unless you use the `sign` method in your controller *BEFORE* you create or update a record. When calling the `sign` method, you must also provide the :signer option, which is usually the `current_user`, but can be pretty much anything that has a to_s method defined on it.
+
+  class ExamsController < ApplicationController
+    def update
+      ...
+      @exam.sign :action => :submit, :signer => current_user   # nothing is saved here, but @exam is now marked to have a signature recorded once it is saved
+      if @exam.save
+        # a signature was created if save was successful
+        flash[:notice] = "Success!"
+      ...
+      
+But what about the :require_explanation_for option? To use that, we would just add a line before the `save` method:
+  class ExamsController < ApplicationController
+    def update
+      ...
+      @exam.sign :action => :submit, :signer => current_user   # nothing is saved here, but @exam is now marked to have a signature recorded once it is saved
+      
+      if @exam.explanation_from_signer_required_for(:update) && params[:explanation].blank?
+        flash[:error] = "Must provide an explanation to do an update!"
+        ...
+      elsif @exam.save
+        # a signature was created if save was successful
+        flash[:notice] = "Success!"
+      ...
+
+Basically, it's up to you to use DottedLine the way you want in your controller. The idea is that it is smart enough to stay out of your way unless you explicitly call it, instead of working magically and mysteriously behind the scenes. This way, you can be sure that the recorded signatures are authoritative and reliable.
+
+
+== How signatures are stored
+
+Each signature stores the name of the signer, a brief description of the record that was affected by the change, and a text description that records every aspect of the change (that DottedLine was set to track). The text description includes changes to attributes and associations specified in the :for option. The explanation is also stored. Primary keys and foreign keys of affected records and associations are also stored, but these are not meant to be relied upon. In case a record is deleted, or a value changes, the text fields stored in the signature will preserve exactly the state of affairs when the change was made.
+
+#TODO: Examples of stored signatures
+
+== License
+DottedLine is released under the MIT license
