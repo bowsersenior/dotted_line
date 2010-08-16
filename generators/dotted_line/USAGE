@@ -1,0 +1,8 @@
+Description:
+    Creates a migration file that will create a signatures table
+
+Example:
+    ./script/generate dotted_line migration
+
+    This will create:
+        db/migrate/TIMESTAMP_create_signatures
