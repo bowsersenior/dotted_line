@@ -53,7 +53,7 @@ DottedLine doesn't do anything unless you use the <tt>sign</tt> method in your c
         flash[:notice] = "Success!"
       ...
       
-But what about the :require_explanation_for option? To use that, we would just add a line before the <tt>save</tt> method:
+But what about the <tt>:require_explanation_for</tt> option? To use that, we would just add a line before the <tt>save</tt> method:
   class ExamsController < ApplicationController
     def update
       ...
