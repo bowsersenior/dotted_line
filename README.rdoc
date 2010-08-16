@@ -10,7 +10,7 @@ Install DottedLine as a plugin (gem version coming soon):
 
 == How do I start signing on the dotted line?
 
-Then, in your model, just use <tt>signs_on_the_dotted_line</tt> like so:
+In your model, just use <tt>signs_on_the_dotted_line</tt> like so:
   class Message < ActiveRecord::Base
     signs_on_the_dotted_line
     ...
@@ -18,23 +18,29 @@ Then, in your model, just use <tt>signs_on_the_dotted_line</tt> like so:
 You can also specify which associations to track, using the <tt>:for</tt> option, and specify one or more actions that require an explanation:
   class Exam < ActiveRecord::Base
     signs_on_the_dotted_line  :for => :grade,                   # one or more association names
-                              :require_explanation_for => :all  # :all, :none, or one or more action names (can be any string or symbol)
+                              :require_explanation_for => :all  # see below for options
     ...
 
-Here's one more example
+<tt>:require_explanation_for</tt> accepts <tt>:all</tt>, <tt>:none</tt>, or one or more action names (can be any string or symbol)
+
+Here's one more example:
   class VeryBindingLegalAgreement < ActiveRecord::Base
-    signs_on_the_dotted_line :for => :agreed_terms, :require_explanation_for => ['deny', 'modify'], :default_action => 'submit'
+    signs_on_the_dotted_line :for => :agreed_terms, 
+                             :require_explanation_for => ['deny', 'modify'], 
+                             :default_action => 'submit'
     ...
 
 All the work above will get you...
 ...ABSOLUTELY NOTHING!
 
-DottedLine doesn't do anything unless you use the <tt>sign</tt> method in your controller *BEFORE* you create or update a record. When calling the <tt>sign</tt> method, you must also provide the <tt>:signer</tt> option, which is usually the <tt>current_user</tt>, but can be pretty much anything that has a to_s method defined on it.
+DottedLine doesn't do anything unless you use the <tt>sign</tt> method in your controller *BEFORE* you create or update a record. When calling the <tt>sign</tt> method, you must also provide the <tt>:signer</tt> option, which is usually the <tt>current_user</tt>, but can be pretty much anything that has a <tt>to_s</tt> method defined on it.
 
   class ExamsController < ApplicationController
     def update
       ...
-      @exam.sign :action => :submit, :signer => current_user   # nothing is saved here, but @exam is now marked to have a signature recorded once it is saved
+      @exam.sign :action => :submit, :signer => current_user   
+      # nothing is saved here, but @exam is now marked to have a signature recorded once it is saved
+      
       if @exam.save
         # a signature was created if save was successful
         flash[:notice] = "Success!"
@@ -44,8 +50,8 @@ But what about the :require_explanation_for option? To use that, we would just a
   class ExamsController < ApplicationController
     def update
       ...
-      @exam.sign :action => :submit, :signer => current_user   # nothing is saved here, but @exam is now marked to have a signature recorded once it is saved
-      
+      @exam.sign :signer => current_user  # no :action set, so :default_action will be used
+            
       if @exam.explanation_from_signer_required_for(:update) && params[:explanation].blank?
         flash[:error] = "Must provide an explanation to do an update!"
         ...
