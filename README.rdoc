@@ -1,11 +1,18 @@
 == DottedLine
 
-A plugin for ActiveRecord that tracks who is responsible for a change, and what they changed. Similar to other versioning or audit trail libraries like {paper_trail}[http://github.com/airblade/paper_trail], {acts_as_versioned}[http://github.com/technoweenie/acts_as_versioned] and {acts_as_revisionable}[http://github.com/bdurand/acts_as_revisionable]. DottedLine's focus is on keeping thorough, redundant signatures for changes that are independent of database id columns. DottedLine only *records* changes, it doesn't allow changes to be restored.
+A plugin for ActiveRecord that tracks who is responsible for a change, and what they changed. Similar to other versioning or audit trail libraries like {paper_trail}[http://github.com/airblade/paper_trail], {acts_as_versioned}[http://github.com/technoweenie/acts_as_versioned] and {acts_as_revisionable}[http://github.com/bdurand/acts_as_revisionable]. 
+
+DottedLine's focus is on keeping thorough, redundant signatures for changes that are independent of database id columns. DottedLine only *records* changes, it doesn't allow changes to be restored.
 
 
 == Installation
-Install DottedLine as a plugin (gem version coming soon):
-  script/plugin install git@github.com:bowsersenior/dotted_line.git
+
+1. Install DottedLine as a plugin (gem version coming soon):
+    script/plugin install git@github.com:bowsersenior/dotted_line.git
+2. Run the generator to create the migration file for the signatures table:
+    script/generate dotted_line
+3. Run the migration:
+    rake db:migrate
 
 
 == How do I start signing on the dotted line?
