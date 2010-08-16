@@ -1,16 +1,21 @@
 == DottedLine
 
-A plugin for ActiveRecord that tracks who is responsible for a change, and what they changed. Similar to other versioning or audit trail libraries like link:http://github.com/airblade/paper_trail and link:http://github.com/technoweenie/acts_as_versioned . DottedLine's focus is on keeping thorough, redundant signatures for changes that are independent of database id columns. DottedLine only *records* changes, it doesn't allow changes to be restored.
+A plugin for ActiveRecord that tracks who is responsible for a change, and what they changed. Similar to other versioning or audit trail libraries like {paper_trail}[http://github.com/airblade/paper_trail], {acts_as_versioned}[http://github.com/technoweenie/acts_as_versioned] and {acts_as_revisionable}[http://github.com/bdurand/acts_as_revisionable]. DottedLine's focus is on keeping thorough, redundant signatures for changes that are independent of database id columns. DottedLine only *records* changes, it doesn't allow changes to be restored.
+
+
+== Installation
+Install DottedLine as a plugin (gem version coming soon):
+  script/plugin install git@github.com:bowsersenior/dotted_line.git
 
 
 == How do I start signing on the dotted line?
 
-In your model, just use `signs_on_the_dotted_line` like so:
+Then, in your model, just use <tt>signs_on_the_dotted_line</tt> like so:
   class Message < ActiveRecord::Base
     signs_on_the_dotted_line
     ...
 
-You can also specify which associations to track, using the :for option, and specify one or more actions that require an explanation:
+You can also specify which associations to track, using the <tt>:for</tt> option, and specify one or more actions that require an explanation:
   class Exam < ActiveRecord::Base
     signs_on_the_dotted_line  :for => :grade,                   # one or more association names
                               :require_explanation_for => :all  # :all, :none, or one or more action names (can be any string or symbol)
@@ -24,7 +29,7 @@ Here's one more example
 All the work above will get you...
 ...ABSOLUTELY NOTHING!
 
-DottedLine doesn't do anything unless you use the `sign` method in your controller *BEFORE* you create or update a record. When calling the `sign` method, you must also provide the :signer option, which is usually the `current_user`, but can be pretty much anything that has a to_s method defined on it.
+DottedLine doesn't do anything unless you use the <tt>sign</tt> method in your controller *BEFORE* you create or update a record. When calling the <tt>sign</tt> method, you must also provide the <tt>:signer</tt> option, which is usually the <tt>current_user</tt>, but can be pretty much anything that has a to_s method defined on it.
 
   class ExamsController < ApplicationController
     def update
@@ -35,7 +40,7 @@ DottedLine doesn't do anything unless you use the `sign` method in your controll
         flash[:notice] = "Success!"
       ...
       
-But what about the :require_explanation_for option? To use that, we would just add a line before the `save` method:
+But what about the :require_explanation_for option? To use that, we would just add a line before the <tt>save</tt> method:
   class ExamsController < ApplicationController
     def update
       ...
@@ -54,7 +59,7 @@ Basically, it's up to you to use DottedLine the way you want in your controller.
 
 == How signatures are stored
 
-Each signature stores the name of the signer, a brief description of the record that was affected by the change, and a text description that records every aspect of the change (that DottedLine was set to track). The text description includes changes to attributes and associations specified in the :for option. The explanation is also stored. Primary keys and foreign keys of affected records and associations are also stored, but these are not meant to be relied upon. In case a record is deleted, or a value changes, the text fields stored in the signature will preserve exactly the state of affairs when the change was made.
+Each signature stores the name of the signer, a brief description of the record that was affected by the change, and a text description that records every aspect of the change (that DottedLine was set to track). The text description includes changes to attributes and associations specified in the <tt>:for</tt> option. The explanation is also stored. Primary keys and foreign keys of affected records and associations are also stored, but these are not meant to be relied upon. In case a record is deleted, or a value changes, the text fields stored in the signature will preserve exactly the state of affairs when the change was made.
 
 #TODO: Examples of stored signatures
 
