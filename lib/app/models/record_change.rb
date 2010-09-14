@@ -17,21 +17,23 @@ class RecordChange < Object
         end
       end.compact    
 
-      @associations = object.dirty_associations.map do |one_association|  
-        added = object.send(one_association)
-        added = [added] unless added.respond_to?(:join)   # turn it into an array unless it's a collection (deal with has_one)
-
-        unless added.empty?
-          OpenStruct.new({ 
-            :name => one_association, 
-            :added => added, 
-            :removed => ''
-          }) 
-        end
-      end.compact
+      # @associations = object.associations.map do |assoc_name, assoc_obj|  
+      #   added = object.send(assoc_name)
+      #   added = [added] unless added.respond_to?(:join)   # turn it into an array unless it's a collection (deal with has_one)
+      #   added.map!{ |a| OpenStruct.new({:id => a.id, :to_ess => a.to_s}) }
+      # 
+      #   unless added.empty?
+      #     OpenStruct.new({ 
+      #       :name => assoc_name, 
+      #       :added => added, 
+      #       :removed => ''
+      #     }) 
+      #   end
+      # end.compact
       
       nil
-    else                    # for changed records, we need to compare against the previous version    
+    else                    
+      # for changed records, we need to compare against the previous version    
       # attributes are easy, using ActiveRecord's Dirty Module's `changes` method
       @attributes = object.changes.map do |k,v|
         # person.changes    #=> { 'name' => ['Bill', 'bob'] }      
@@ -42,24 +44,32 @@ class RecordChange < Object
         })
       end
 
-      # associations are trickier, relying on the dirty_associations plugin
-      @associations = object.dirty_associations.map do |one_association|
-        if object.send("#{one_association}_changed?")
-          association_ids = object.send("#{one_association.to_s.chop}_ids_added")
-
-          # don't use dirty_association's collection_added method because we are working with a cloned object here
-          association_class = object.class.reflect_on_association(one_association).klass
-          added = association_class.find association_ids
-
-          removed = object.send("#{one_association}_removed")
-          OpenStruct.new({ 
-            :name => one_association, 
-            :added => added, 
-            :removed => removed
-          })
-        end
-      end.compact
+      # associations are trickier
+      # @associations = object.associations.map do |assoc_name, assoc_obj|
+      #   if object.send("#{assoc_name}_changed?")
+      #     association_ids = object.send("#{assoc_name.to_s.chop}_ids_added")
+      # 
+      #     association_class = assoc_obj.options.class_name.blank? ? assoc_name.camelcase.constantize : assoc_obj.options.class_name.constantize
+      #     
+      #     added = association_class.find(association_ids)
+      #     added.map!{ |a| OpenStruct.new({:id => a.id, :to_ess => a.to_s}) }
+      #     
+      #     removed = object.send("#{assoc_name}_removed")
+      #     removed.map!{ |a| OpenStruct.new({:id => a.id, :to_ess => a.to_s}) }
+      #     
+      #     OpenStruct.new({ 
+      #       :name => assoc_name, 
+      #       :added => added, 
+      #       :removed => removed
+      #     })
+      #   end
+      # end.compact
     end
+    
+    # disable associations for now
+    @associations = []
+    
+    self
   end
   
   def attributes_to_s(separator="<br />")

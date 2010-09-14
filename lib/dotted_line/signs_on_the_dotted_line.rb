@@ -1,14 +1,14 @@
 module DottedLine
+  extend ActiveSupport::Concern
+
   def self.included(base)
     base.send :extend, ClassMethods
   end
 
   module ClassMethods
-    def signs_on_the_dotted_line(opts={:for => :all, :require_explanation_for => [], :default_action => 'create'})
-      keep_track_of(*opts[:for]) unless opts[:for].blank?
-
-      has_many :signatures, :as => :signable, :validate => false
-      validates_associated :signatures
+    def signs_on_the_dotted_line(opts={:require_explanation_for => [], :default_action => 'create'})
+      references_many :signatures, :inverse_of => :signable, :stored_as => :array
+      # validates_associated :signatures
       accepts_nested_attributes_for :signatures
             
       cattr_accessor :require_explanation_for, :default_action, :tracked_associations, :require_signature_for_update
@@ -25,7 +25,7 @@ module DottedLine
   end
 
   module InstanceMethods
-    def record_details_for_signature(*args)
+    def record_details_for_signature(*args)            
       self.details_for_signature = *args
       archive_self_for_signature
     end
@@ -33,18 +33,20 @@ module DottedLine
     
     def archive_self_for_signature
       ghost = self.clone
-        
-      self.dirty_associations.each do |assoc|
-        ghost.send( "#{assoc}=" , self.send(assoc) )
-      end
-          
+      
+      # self.associations.reject{|k,v| k == 'signatures'}.each do |assoc_name, assoc_obj|
+      #   ghost.send( "#{assoc_name}=" , self.send(assoc_name) )
+      # end
+      
       self.details_for_signature[:ghost] = ghost
       self.details_for_signature[:new_record?] = self.new_record?
+      
+      self.details_for_signature
       
       true
     end
     
-    def record_signature
+    def record_signature      
       unless self.already_signed
         raise_error DetailsMissingError.new("details_for_signature is blank!") if self.details_for_signature.blank?
 
@@ -58,19 +60,22 @@ module DottedLine
           end
         
           ghost = self.details_for_signature[:ghost]
-          action = self.details_for_signature[:action].to_s
-          signer = self.details_for_signature[:signer]
-          explanation = self.details_for_signature[:explanation]
-      
-          ghost.enable_dirty_associations do
+          
+          if ghost.blank?
+            raise "Couldn't find the cached copy of the object to be signed before it was changed!"
+          else
+            action = self.details_for_signature[:action].to_s
+            signer = self.details_for_signature[:signer]
+            explanation = self.details_for_signature[:explanation]
+    
             ghost.attributes = self.attributes
 
-            self.dirty_associations.each do |assoc|
-              ghost.send "#{assoc.to_s}=", self.send(assoc)
-            end
+            # self.associations.each do |assoc_name, assoc_obj|
+            #   ghost.send "#{assoc_name}=", self.send(assoc_name)
+            # end
 
             what_changed = RecordChange.new(ghost, :new_record? => self.details_for_signature[:new_record?])
-        
+                
             create_signature(action, signer, explanation, what_changed)
           end
         end
@@ -91,15 +96,31 @@ module DottedLine
     end
 
     def create_signature(action, signer, explanation="", what_changed=nil)    
-      self.signatures.create(
-        :signable                 => self,
-        :user                     => signer, 
-        :action                   => action.to_s, 
-        :name_of_signer           => signer.to_s,
-        :target                   => self.to_s,
-        :explanation_from_signer  => explanation,
-        :what_changed             => what_changed
-      )
+      RecordChange
+          
+      sig = Signature.new
+      
+      sig.signable_id              = self.id
+      sig.signable_type            = self.class.to_s        
+      sig.signer_id                = signer.id
+      sig.action                   = action.to_s 
+      sig.name_of_signer           = signer.to_s
+      sig.target                   = self.to_s
+      sig.explanation_from_signer  = explanation
+      sig.what_changed             = what_changed.to_yaml
+
+      sig.save!
+      # weird error results from the code below (undefined method 'options' for Nil class)
+      # self.signatures.create(
+      #   :signable_id              => self.id,
+      #   :signable_type            => self.class.to_s,        
+      #   :signer_id                => signer.id, 
+      #   :action                   => action.to_s, 
+      #   :name_of_signer           => signer.to_s,
+      #   :target                   => self.to_s,
+      #   :explanation_from_signer  => explanation,
+      #   :what_changed             => what_changed.to_yaml
+      # )
       
       self.already_signed = true  # prevent duplicates
     end    
@@ -119,4 +140,19 @@ module DottedLine
   
 end
 
-ActiveRecord::Base.send :include, DottedLine
+# ActiveRecord::Base.send :include, DottedLine
+
+# Info on monkeypatching Mongoid : 
+# http://log.mazniak.org/post/719062325/monkey-patching-activesupport-concern-and-you#footer
+
+if defined? Mongoid
+  module Mongoid
+    module Components
+      old_block = @_included_block
+      @_included_block = Proc.new do 
+        class_eval(&old_block) if old_block
+        include DottedLine
+      end
+    end
+  end  
+end
