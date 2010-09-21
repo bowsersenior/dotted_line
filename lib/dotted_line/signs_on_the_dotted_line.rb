@@ -104,7 +104,7 @@ module DottedLine
       sig.signable_type            = self.class.to_s        
       sig.signer_id                = signer.id
       sig.action                   = action.to_s 
-      sig.name_of_signer           = signer.to_s
+      sig.name_of_signer           = signer.respond_to?(:name) ? signer.name : signer.to_s
       sig.target                   = self.to_s
       sig.explanation_from_signer  = explanation
       sig.what_changed             = what_changed.to_yaml
