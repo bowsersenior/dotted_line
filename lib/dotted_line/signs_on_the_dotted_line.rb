@@ -8,6 +8,7 @@ module DottedLine
   module ClassMethods
     def signs_on_the_dotted_line(opts={:require_explanation_for => [], :default_action => 'create'})
       references_many :signatures, :inverse_of => :signable, :stored_as => :array
+
       # validates_associated :signatures
       accepts_nested_attributes_for :signatures
             
@@ -100,8 +101,12 @@ module DottedLine
           
       sig = Signature.new
       
+      # to get around problems with references before the save transaction is completed
+      sig.signable_object          = self
+      
       sig.signable_id              = self.id
-      sig.signable_type            = self.class.to_s        
+      sig.signable_type            = self.class.to_s            
+
       sig.signer_id                = signer.id
       sig.action                   = action.to_s 
       sig.name_of_signer           = signer.respond_to?(:name) ? signer.name : signer.to_s

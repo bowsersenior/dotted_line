@@ -28,9 +28,7 @@
 #   end
 class Signature
   include Mongoid::Document
-  include Mongoid::Timestamps
-  
-  include ScopedSearch::Model  
+  include Mongoid::Timestamps  
   
   field :action
   field :target
@@ -43,6 +41,7 @@ class Signature
   field :explanation_from_signer
   field :what_changed
 
+  # mongoid doesn't support polymorphic references yet
   field :signable_id
   field :signable_type
 
@@ -56,11 +55,25 @@ class Signature
 
   
   before_validation :generate_description, :on => :create
-
-   
+  after_create :update_signable_with_signature_id
+  
+  attr_accessor :signable_object
+  
   def signable
-    signable_type.constantize.find(signable_id)
+    signable_object or signable_type.constantize.find(signable_id)
   end 
+  
+  def update_signable_with_signature_id
+    # disable signature callback to avoid infinite loop
+    signable_type.constantize.skip_callback(:save, :after, :record_signature)
+
+    # set the foreign key in the signable object
+    signable.signature_ids << self.id
+    signable.save!
+    
+    # restore callback
+    signable_type.constantize.set_callback(:save, :after, :record_signature)
+  end
   
   def signer
     signer_class.constantize.find(signer_id)
@@ -73,7 +86,7 @@ class Signature
 
     desc = "On #{now.strftime("%b %d, %Y")} at #{now.strftime('%I:%M%p')}" +
            ", #{name_of_signer} (user types: #{signer.user_types.map(&:name).join(', ')}) signed off on" +
-           " a '#{action}' action on the following #{signable_type}: #{signable.to_s}"
+           " a '#{action}' action on the following #{signable_type}: #{target}"
                         
     desc += ".#{line_break} Explanation from signer: #{explanation_from_signer}" unless explanation_from_signer.blank?
     desc += ".#{line_break} Changes made:#{line_break} #{what_changed.to_s}" unless what_changed.blank?
@@ -82,7 +95,7 @@ class Signature
   end  
    
   def what_changed
-    RecordChange  # calling RecordChanged will ensure that it is loaded before what_changed is instantiated
+    RecordChange  # calling RecordChange will ensure that it is loaded before what_changed is instantiated
     YAML::load(self.attributes['what_changed'])
   end
     
